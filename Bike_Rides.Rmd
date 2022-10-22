@@ -2,13 +2,13 @@
 title: "Cursera_Project_Bike_Rides"
 author: "Jakub Mortka"
 date: "2022-10-19"
-output: html_document
+output: github_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-```
-# Setting up workspace - Libraries
+
+## Setting up workspace - Libraries
 
 install.packages("tidyverse", repos = "http://cran.us.r-project.org")
 install.packages("DataExplorer", repos = "http://cran.us.r-project.org")
@@ -27,63 +27,67 @@ library(rvest)
 library(dplyr)
 library(plyr)
 library(readr)
-library(geosphere)
 
-# Setting sessioninfo for English
+
+
+### Setting sessioninfo for English
 
 Sys.setlocale("LC_TIME", "English")
 
+## Data Download
 
-# Downloading files into directory
+### Downloading files into directory
 
 data_url <- "https://divvy-tripdata.s3.amazonaws.com"
 
 files <- read_html(data_url) |> html_elements('key') |> html_text() |> url_absolute(data_url)
 
-# Selecting data from 2021
+### Selecting data from 2021
 
 files_2021 <- grep("2021", files, value = TRUE)
 
-# Setting up directory for the files 
+### Setting up directory for the files 
 
 dir <- setwd("E://Data Analysis/Cursera Capstone Project/Source Data")
 
-# Iterate and download
+### Iterate and download
 
 lapply(files_2021, function(files_2021) download.file(files_2021, file.path(dir, basename(files_2021))))
 
 list.files()
 
-# Unpacking data
+## Unpacking data
 
-## get all the zip files as one vector
+### get all the zip files as one vector
 
 zipped_files <- list.files(path = dir, pattern = ".*zip", full.names = TRUE)
 
-## setting directory for unpacking
+### setting directory for unpacking
 
 unpackdir <-"E:/Data Analysis/Cursera Capstone Project/Source Data/Unzipped Files"
 
-## unzipping files
+### unzipping files
 
 ldply(.data = zipped_files, .fun = unzip, exdir = unpackdir)
 
-# Merging all the files
+## Data Prep
 
-bike_rides_2021 <- list.files(path = unpackdir,                   # Identify all csv files in folder
+### Merging all the files
+
+bike_rides_2021 <- list.files(path = unpackdir,                   ### Identify all csv files in folder
                        pattern = "*.csv", full.names = TRUE) %>% 
-  lapply(read_csv) %>%                                            # Store all files in list
-  bind_rows                                                       # Combine data sets into one data set
+  lapply(read_csv) %>%                                            ### Store all files in list
+  bind_rows                                                       ### Combine data sets into one data set
 
-# Removing any Duplicates 
+### Removing any Duplicates 
 
 bike_rides_2021 <- distinct(bike_rides_2021, ride_id, .keep_all=TRUE)
 
-# Applying alias to the data frame for easier transformaiton going forward
+### Applying alias to the data frame for easier transformaiton going forward
 
 all_data <- bike_rides_2021
 
-# Adding additional columns/calculations
+### Adding additional columns/calculations
 
 all_data$date <- as.Date(all_data$started_at)
 all_data$month <- format(as.Date(all_data$date), "%m")
@@ -96,18 +100,18 @@ all_data$rent_duration <- as.numeric(difftime(all_data$ended_at, all_data$starte
 all_data$rent_distance <- distHaversine(cbind(all_data$start_lng, all_data$start_lat), cbind(all_data$end_lng, all_data$end_lat))
 
 
-#Making sure new attributes are numeric
+### Making sure new attributes are numeric
 
 all_data$rent_duration <- as.numeric(all_data$rent_duration)
 all_data$rent_distance <- as.numeric(all_data$rent_distance)
 
-#Data Structure review
+### Data Structure review
 
 str(data_filtered)
 
-# Testing data and Data Cleanup
+### Testing data and Data Cleanup
 
-## Testing Cases:
+### Testing Cases:
   ### 1.Rent Duration <0 or 0
   ### 2.Rent Distance <0 or 0
   ### 3.Start Station is blank
@@ -120,7 +124,7 @@ sum(all_data$rent_distance ==0 , na.rm=TRUE)
 sum(is.na(all_data$start_station_name))
 sum(is.na(all_data$end_station_name))
 
-## Filtering out all data meeting testing criteria
+### Filtering out all data meeting testing criteria
 
 data_filtered <- all_data %>%
   filter(rent_duration >0) %>%
@@ -128,11 +132,11 @@ data_filtered <- all_data %>%
   filter(!is.na(start_station_name)) %>%
   filter(!is.na(end_station_name)) 
     
-## Selecting only necessary columns
+### Selecting only necessary columns
 
 data_for_extract <- data_filtered[ ,c("ride_id","rideable_type","started_at","ended_at","start_station_name","start_station_id","end_station_name","end_station_id","member_casual","date","month","day","year","weekday","start_hour","end_hour","rent_duration","rent_distance")]
 
-## Extract to CSV
+### Extract to CSV
 
 write.csv(data_for_extract,"E://Data Analysis/Cursera Capstone Project/2021_Bike_Data.csv", row.names = FALSE)
-
+```
